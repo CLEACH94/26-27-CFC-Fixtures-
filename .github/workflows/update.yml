@@ -1,0 +1,60 @@
+name: Update CFC Fixtures
+
+on:
+  # Run automatically four times per day
+  schedule:
+    - cron: "17 2,8,14,20 * * *"
+
+  # Also lets us press a button to test it manually
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cfc-fixture-update
+  cancel-in-progress: false
+
+jobs:
+  update-calendar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Get repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install requirements
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests pandas lxml
+
+      - name: Update fixture calendar
+        run: python update_calendar.py
+
+      - name: Check calendar exists
+        run: |
+          test -s fixtures.ics
+          grep -q "BEGIN:VCALENDAR" fixtures.ics
+          grep -q "BEGIN:VEVENT" fixtures.ics
+          grep -q "Carterton" fixtures.ics
+
+      - name: Save changes
+        run: |
+          git config user.name "CFC Fixture Bot"
+          git config user.email "actions@users.noreply.github.com"
+
+          git add fixtures.ics status.json
+
+          if git diff --cached --quiet; then
+            echo "No fixture changes detected."
+          else
+            git commit -m "Automatically update CFC fixtures"
+            git push
+          fi

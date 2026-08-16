@@ -1,127 +1,203 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Carterton FC Fixtures 2026/27</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <style>
-    * { box-sizing: border-box; }
+<title>Carterton FC Fixtures 2026/27</title>
 
-    body {
-      margin: 0;
-      min-height: 100vh;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
-      background: #0d0d0d;
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-    }
+<style>
+* { box-sizing: border-box; }
 
-    .card {
-      width: 100%;
-      max-width: 520px;
-      background: #1b1b1d;
-      border-radius: 24px;
-      padding: 30px 24px;
-      text-align: center;
-      box-shadow: 0 12px 40px rgba(0,0,0,.4);
-    }
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  background: #0d0d0d;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 22px;
+}
 
-    .badge {
-      width: 150px;
-      height: 150px;
-      object-fit: contain;
-      margin-bottom: 18px;
-    }
+.card {
+  width: 100%;
+  max-width: 520px;
+  background: #1b1b1d;
+  border-radius: 24px;
+  padding: 30px 24px;
+  text-align: center;
+}
 
-    h1 {
-      margin: 0 0 6px;
-      font-size: 32px;
-    }
+.badge {
+  width: 150px;
+  height: 150px;
+  object-fit: contain;
+  margin-bottom: 18px;
+}
 
-    h2 {
-      margin: 0 0 25px;
-      font-size: 18px;
-      font-weight: 500;
-      color: #c1c1c1;
-    }
+h1 {
+  margin: 0 0 6px;
+  font-size: 32px;
+}
 
-    .lead {
-      font-size: 19px;
-      font-weight: 600;
-      margin-bottom: 8px;
-    }
+h2 {
+  margin: 0 0 24px;
+  font-size: 18px;
+  font-weight: 500;
+  color: #c1c1c1;
+}
 
-    p {
-      color: #d0d0d0;
-      line-height: 1.5;
-    }
+.lead {
+  font-size: 21px;
+  font-weight: 750;
+  margin-bottom: 10px;
+}
 
-    .button {
-      display: block;
-      width: 100%;
-      padding: 18px;
-      margin-top: 18px;
-      border-radius: 14px;
-      text-decoration: none;
-      font-size: 18px;
-      font-weight: 800;
-    }
+p {
+  color: #d0d0d0;
+  line-height: 1.5;
+}
 
-    .primary {
-      background: #fff;
-      color: #111;
-    }
+.button {
+  display: block;
+  width: 100%;
+  padding: 17px;
+  margin-top: 14px;
+  border-radius: 14px;
+  text-decoration: none;
+  font-size: 17px;
+  font-weight: 800;
+  border: 0;
+  cursor: pointer;
+}
 
-    .secondary {
-      background: #333;
-      color: white;
-    }
+.apple {
+  background: white;
+  color: #111;
+}
 
-    .small {
-      margin-top: 25px;
-      font-size: 13px;
-      color: #8e8e8e;
-      line-height: 1.5;
-    }
-  </style>
+.google {
+  background: #4285f4;
+  color: white;
+}
+
+.download {
+  background: #333;
+  color: white;
+}
+
+.googleHelp {
+  display: none;
+  margin-top: 14px;
+  padding: 18px;
+  background: #29292c;
+  border-radius: 14px;
+  text-align: left;
+  color: #ddd;
+  line-height: 1.5;
+}
+
+.feed {
+  margin-top: 12px;
+  padding: 12px;
+  background: #111;
+  border-radius: 10px;
+  font-size: 12px;
+  word-break: break-all;
+  user-select: all;
+}
+
+.small {
+  margin-top: 24px;
+  font-size: 13px;
+  color: #8e8e8e;
+  line-height: 1.5;
+}
+</style>
 </head>
 
 <body>
-  <div class="card">
 
-<img src="cfc-badge.png" class="badge" alt="Carterton Football Club badge">
+<div class="card">
 
-    <h1>Carterton FC</h1>
-    <h2>Men's First Team • 2026/27</h2>
+  <img
+    src="cfc-badge.png"
+    class="badge"
+    alt="Carterton Football Club badge"
+  >
 
-    <div class="lead">Never miss a fixture.</div>
+  <h1>Carterton FC</h1>
+  <h2>Men's First Team • 2026/27</h2>
+
+  <div class="lead">Never miss a fixture.</div>
+
+  <p>
+    Add the Carterton FC fixture calendar to your phone.
+  </p>
+
+  <a
+    class="button apple"
+    href="webcal://cleach94.github.io/26-27-CFC-Fixtures-/fixtures.ics">
+    🍎 Add to iPhone / Apple Calendar
+  </a>
+
+  <button
+    class="button google"
+    onclick="toggleGoogle()">
+    📅 Add to Google Calendar / Android
+  </button>
+
+  <div id="googleHelp" class="googleHelp">
+
+    <strong>Google Calendar</strong>
 
     <p>
-      Subscribe to the Carterton FC fixture calendar and have fixtures added directly to your phone.
+      Google requires calendar subscriptions from its web version.
     </p>
 
-    <a
-      class="button primary"
-      href="webcal://raw.githubusercontent.com/CLEACH94/26-27-CFC-Fixtures-/refs/heads/main/fixtures.ics">
-      📅 Add Fixtures to Calendar
-    </a>
+    <p>
+      On a computer, open Google Calendar → Other calendars → + → From URL,
+      then paste this address:
+    </p>
 
-    <a
-      class="button secondary"
-      href="https://raw.githubusercontent.com/CLEACH94/26-27-CFC-Fixtures-/refs/heads/main/fixtures.ics">
-      Download Calendar File
-    </a>
-
-    <div class="small">
-      Carterton Football Club • 2026/27
-      <br><br>
-      Fixture details may change. Please check official club communications for late updates.
+    <div class="feed">
+      https://cleach94.github.io/26-27-CFC-Fixtures-/fixtures.ics
     </div>
 
+    <p>
+      Once added, the fixtures will also appear in the Google Calendar app on your phone.
+    </p>
+
   </div>
+
+  <a
+    class="button download"
+    href="fixtures.ics">
+    ⬇️ Download Fixture Calendar
+  </a>
+
+  <div class="small">
+    Carterton Football Club • 2026/27
+    <br><br>
+    Fixture details may change. Please check official club communications
+    for late changes.
+  </div>
+
+</div>
+
+<script>
+function toggleGoogle() {
+  const box = document.getElementById("googleHelp");
+
+  if (box.style.display === "block") {
+    box.style.display = "none";
+  } else {
+    box.style.display = "block";
+  }
+}
+</script>
+
 </body>
 </html>

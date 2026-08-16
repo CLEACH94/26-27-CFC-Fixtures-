@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import hashlib
-import html
 import json
 import os
+import re
 import sys
 import tempfile
+import time
 from datetime import datetime, timedelta, timezone
 from io import StringIO
 from pathlib import Path
@@ -16,15 +17,20 @@ import requests
 
 
 # ============================================================
-# CFC FIXTURE CALENDAR
-# Automatically generated from FA Full-Time
+# CARTERTON FC AUTOMATIC FIXTURE CALENDAR
+# Source: FA Full-Time
 # ============================================================
 
 TEAM_NAME = "Carterton"
 TEAM_ID = "200955811"
+LEAGUE_ID = "646734134"
 
-FULL_TIME_URL = (
+TEAM_URL = (
     f"https://fulltime.thefa.com/displayTeam.html?id={TEAM_ID}"
+)
+
+LEAGUE_URL = (
+    f"https://fulltime.thefa.com/fixtures.html?league={LEAGUE_ID}"
 )
 
 OUTPUT_FILE = Path("fixtures.ics")
@@ -33,39 +39,63 @@ STATUS_FILE = Path("status.json")
 UK_TIME = ZoneInfo("Europe/London")
 
 REQUEST_TIMEOUT = 30
+MAX_ATTEMPTS = 3
 
 HEADERS = {
     "User-Agent": (
-        "Mozilla/5.0 (compatible; CartertonFCFixtureCalendar/1.0; "
-        "+https://github.com/)"
-    )
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) "
+        "AppleWebKit/605.1.15 (KHTML, like Gecko) "
+        "Version/18.0 Mobile/15E148 Safari/604.1"
+    ),
+    "Accept": (
+        "text/html,application/xhtml+xml,application/xml;q=0.9,"
+        "image/avif,image/webp,*/*;q=0.8"
+    ),
+    "Accept-Language": "en-GB,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1",
+    "Cache-Control": "no-cache",
+    "Pragma": "no-cache",
 }
 
 
 # ============================================================
-# HELPERS
+# TEXT HELPERS
 # ============================================================
 
 def clean(value) -> str:
-    """Clean text returned by the webpage."""
     if value is None:
         return ""
 
     text = str(value)
 
-    if text.lower() == "nan":
+    if text.lower() in {"nan", "none"}:
         return ""
 
     return " ".join(text.split()).strip()
 
 
 def normalise(value: str) -> str:
-    """Normalise text for comparisons."""
     return clean(value).casefold()
 
 
+def is_carterton(value: str) -> bool:
+    """
+    Allow small variations such as:
+    Carterton
+    Carterton FC
+    Carterton First
+    """
+    text = normalise(value)
+
+    return (
+        text == "carterton"
+        or text.startswith("carterton ")
+    )
+
+
 def ics_escape(value: str) -> str:
-    """Escape text safely for an ICS calendar."""
     value = clean(value)
 
     return (
@@ -80,10 +110,6 @@ def ics_escape(value: str) -> str:
 
 
 def fold_ics_line(line: str, limit: int = 73) -> list[str]:
-    """
-    Fold long ICS lines so calendars such as Apple Calendar,
-    Google Calendar and Outlook can read them reliably.
-    """
     if len(line.encode("utf-8")) <= limit:
         return [line]
 
@@ -105,17 +131,52 @@ def fold_ics_line(line: str, limit: int = 73) -> list[str]:
     return output
 
 
+# ============================================================
+# DATES
+# ============================================================
+
+def parse_fixture_datetime(value: str) -> datetime:
+    """
+    FA currently uses DD/MM/YY HH:MM.
+    A few fallback formats are included in case that changes slightly.
+    """
+    value = clean(value)
+
+    formats = (
+        "%d/%m/%y %H:%M",
+        "%d/%m/%Y %H:%M",
+        "%d/%m/%y",
+        "%d/%m/%Y",
+    )
+
+    for date_format in formats:
+        try:
+            parsed = datetime.strptime(value, date_format)
+
+            if "%H" not in date_format:
+                parsed = parsed.replace(hour=15, minute=0)
+
+            return parsed.replace(tzinfo=UK_TIME)
+
+        except ValueError:
+            continue
+
+    raise ValueError(f"Could not understand fixture date: {value}")
+
+
+# ============================================================
+# STABLE CALENDAR IDS
+# ============================================================
+
 def stable_uid(competition: str, home: str, away: str) -> str:
     """
-    Create a permanent fixture ID.
+    Date/time is intentionally NOT part of the UID.
 
-    IMPORTANT:
-    The date is deliberately NOT included.
-
-    If a match is moved to another day or kick-off time,
-    calendar apps see it as the SAME fixture and update it
-    rather than creating a duplicate.
+    If a game moves from Saturday 3pm to Tuesday 7:45pm,
+    calendar apps should update the existing event rather
+    than create a duplicate.
     """
+
     raw = "|".join(
         [
             TEAM_ID,
@@ -125,293 +186,552 @@ def stable_uid(competition: str, home: str, away: str) -> str:
         ]
     )
 
-    digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:24]
+    digest = hashlib.sha256(
+        raw.encode("utf-8")
+    ).hexdigest()[:24]
 
     return f"{digest}@carterton-fc-fixtures"
 
 
-def find_column(columns, *wanted):
-    """Find a dataframe column even if FA changes spacing/capitalisation."""
+# ============================================================
+# DOWNLOAD FA FULL-TIME
+# ============================================================
+
+def make_session() -> requests.Session:
+    session = requests.Session()
+    session.headers.update(HEADERS)
+
+    return session
+
+
+def download_url(session: requests.Session, url: str) -> str:
+    last_error = None
+
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+
+        print(
+            f"Request attempt {attempt}/{MAX_ATTEMPTS}: {url}"
+        )
+
+        try:
+            response = session.get(
+                url,
+                timeout=REQUEST_TIMEOUT,
+                allow_redirects=True,
+            )
+
+            print(
+                f"HTTP status: {response.status_code}"
+            )
+
+            if response.status_code == 403:
+                raise RuntimeError(
+                    "FA Full-Time returned HTTP 403 Forbidden."
+                )
+
+            response.raise_for_status()
+
+            page = response.text
+
+            if len(page) < 3000:
+                raise RuntimeError(
+                    "FA returned an unexpectedly small webpage."
+                )
+
+            if "full-time" not in page.casefold():
+                raise RuntimeError(
+                    "Returned webpage does not appear to be FA Full-Time."
+                )
+
+            return page
+
+        except Exception as exc:
+            last_error = exc
+
+            print(f"Attempt failed: {exc}")
+
+            if attempt < MAX_ATTEMPTS:
+                time.sleep(3 * attempt)
+
+    raise RuntimeError(
+        f"Unable to download {url}: {last_error}"
+    )
+
+
+def download_full_time_pages() -> list[tuple[str, str]]:
+    """
+    Try multiple public FA Full-Time pages.
+
+    If one source is temporarily unavailable, the other
+    can still be used.
+    """
+
+    session = make_session()
+
+    # Establish a normal session first.
+    try:
+        session.get(
+            "https://fulltime.thefa.com/",
+            timeout=10,
+        )
+    except Exception:
+        pass
+
+    sources = []
+
+    for source_name, url in (
+        ("Carterton team page", TEAM_URL),
+        ("Hellenic League fixtures page", LEAGUE_URL),
+    ):
+
+        try:
+            page = download_url(session, url)
+
+            if TEAM_NAME.casefold() in page.casefold():
+                sources.append(
+                    (source_name, page)
+                )
+                print(
+                    f"Successfully downloaded: {source_name}"
+                )
+            else:
+                print(
+                    f"{source_name} downloaded but Carterton "
+                    "was not found in the response."
+                )
+
+        except Exception as exc:
+            print(
+                f"{source_name} unavailable: {exc}"
+            )
+
+    if not sources:
+        raise RuntimeError(
+            "All FA Full-Time sources failed. "
+            "The existing calendar has NOT been changed."
+        )
+
+    return sources
+
+
+# ============================================================
+# TABLE HELPERS
+# ============================================================
+
+def flatten_columns(table: pd.DataFrame) -> pd.DataFrame:
+
+    if isinstance(table.columns, pd.MultiIndex):
+        table.columns = [
+            " ".join(
+                clean(part)
+                for part in column
+                if clean(part)
+            )
+            for column in table.columns
+        ]
+    else:
+        table.columns = [
+            clean(column)
+            for column in table.columns
+        ]
+
+    return table
+
+
+def find_column(columns, choices):
+
     for column in columns:
+
         column_text = normalise(column)
 
-        for target in wanted:
-            if normalise(target) == column_text:
+        for choice in choices:
+
+            if column_text == normalise(choice):
                 return column
 
     return None
 
 
+def column_contains(columns, word: str):
+
+    target = normalise(word)
+
+    for column in columns:
+
+        if target in normalise(column):
+            return column
+
+    return None
+
+
 # ============================================================
-# DOWNLOAD FULL-TIME
+# EXTRACT FIXTURES FROM TABLES
 # ============================================================
 
-def download_full_time_page() -> str:
-    print("Downloading FA Full-Time...")
+def extract_from_table(
+    table: pd.DataFrame,
+) -> list[dict]:
 
-    response = requests.get(
-        FULL_TIME_URL,
-        headers=HEADERS,
-        timeout=REQUEST_TIMEOUT,
+    table = flatten_columns(table)
+
+    columns = list(table.columns)
+
+    date_col = (
+        find_column(
+            columns,
+            (
+                "Date / Time",
+                "Date/Time",
+                "Date",
+            ),
+        )
+        or column_contains(columns, "date")
     )
 
-    response.raise_for_status()
+    home_col = (
+        find_column(
+            columns,
+            (
+                "Home Team",
+                "Home",
+            ),
+        )
+        or column_contains(columns, "home")
+    )
 
-    page = response.text
+    away_col = (
+        find_column(
+            columns,
+            (
+                "Away Team",
+                "Away",
+            ),
+        )
+        or column_contains(columns, "away")
+    )
 
-    # Basic sanity checks.
-    if len(page) < 5000:
-        raise RuntimeError(
-            "FA Full-Time returned an unexpectedly small page. "
-            "Calendar has NOT been changed."
+    venue_col = (
+        find_column(
+            columns,
+            ("Venue",),
+        )
+        or column_contains(columns, "venue")
+    )
+
+    competition_col = (
+        find_column(
+            columns,
+            (
+                "Type",
+                "Competition",
+            ),
+        )
+        or column_contains(columns, "type")
+        or column_contains(columns, "competition")
+    )
+
+    if not date_col or not home_col or not away_col:
+        return []
+
+    fixtures = []
+
+    now_uk = datetime.now(UK_TIME)
+
+    for _, row in table.iterrows():
+
+        date_text = clean(row.get(date_col, ""))
+        home = clean(row.get(home_col, ""))
+        away = clean(row.get(away_col, ""))
+
+        if not home or not away:
+            continue
+
+        if not (
+            is_carterton(home)
+            or is_carterton(away)
+        ):
+            continue
+
+        try:
+            fixture_datetime = parse_fixture_datetime(
+                date_text
+            )
+        except ValueError:
+            continue
+
+        # Keep today's game around for a few hours after KO.
+        if fixture_datetime < (
+            now_uk - timedelta(hours=4)
+        ):
+            continue
+
+        fixtures.append(
+            {
+                "date_time": fixture_datetime,
+                "home": home,
+                "away": away,
+                "venue": clean(
+                    row.get(venue_col, "")
+                ) if venue_col else "",
+                "competition": clean(
+                    row.get(competition_col, "")
+                ) if competition_col else "",
+            }
         )
 
-    if TEAM_NAME.casefold() not in page.casefold():
-        raise RuntimeError(
-            f"Could not confirm {TEAM_NAME} on the FA page. "
-            "Calendar has NOT been changed."
+    return fixtures
+
+
+def extract_fixtures(
+    sources: list[tuple[str, str]],
+) -> tuple[list[dict], str]:
+
+    all_candidates = []
+
+    source_names = []
+
+    for source_name, page in sources:
+
+        print(
+            f"Reading tables from: {source_name}"
         )
 
-    if "Upcoming Fixtures".casefold() not in page.casefold():
-        raise RuntimeError(
-            "Could not find the Upcoming Fixtures section. "
-            "Calendar has NOT been changed."
-        )
+        try:
+            tables = pd.read_html(
+                StringIO(page)
+            )
 
-    print("FA Full-Time downloaded successfully.")
+        except Exception as exc:
+            print(
+                f"Could not parse {source_name}: {exc}"
+            )
+            continue
 
-    return page
+        source_fixture_count = 0
 
+        for table in tables:
 
-# ============================================================
-# FIND THE FIXTURE TABLE
-# ============================================================
+            fixtures = extract_from_table(
+                table
+            )
 
-def get_fixture_table(page: str) -> pd.DataFrame:
-    print("Looking for CFC fixture table...")
-
-    try:
-        tables = pd.read_html(StringIO(page))
-    except Exception as exc:
-        raise RuntimeError(
-            f"Could not read tables from FA Full-Time: {exc}"
-        ) from exc
-
-    if not tables:
-        raise RuntimeError(
-            "No tables were found on FA Full-Time. "
-            "Calendar has NOT been changed."
-        )
-
-    for table in tables:
-        # Flatten column names if pandas creates multi-level headings.
-        if isinstance(table.columns, pd.MultiIndex):
-            table.columns = [
-                " ".join(
-                    clean(part)
-                    for part in column
-                    if clean(part)
+            if fixtures:
+                all_candidates.extend(
+                    fixtures
                 )
-                for column in table.columns
-            ]
+
+                source_fixture_count += len(
+                    fixtures
+                )
+
+        if source_fixture_count:
+
+            source_names.append(
+                source_name
+            )
+
+            print(
+                f"{source_name}: found "
+                f"{source_fixture_count} candidate fixtures."
+            )
+
+    if not all_candidates:
+
+        raise RuntimeError(
+            "No upcoming Carterton fixtures could be "
+            "identified from FA Full-Time. "
+            "Existing calendar preserved."
+        )
+
+    # ========================================================
+    # REMOVE DUPLICATES
+    # ========================================================
+
+    unique = {}
+
+    for fixture in all_candidates:
+
+        key = (
+            normalise(fixture["competition"]),
+            normalise(fixture["home"]),
+            normalise(fixture["away"]),
+        )
+
+        existing = unique.get(key)
+
+        if existing is None:
+
+            unique[key] = fixture
+
         else:
-            table.columns = [clean(column) for column in table.columns]
 
-        columns = list(table.columns)
+            # Prefer the version with more information.
 
-        date_col = find_column(
-            columns,
-            "Date / Time",
-            "Date/Time",
-            "Date",
-        )
+            if (
+                not existing["venue"]
+                and fixture["venue"]
+            ):
+                existing["venue"] = fixture[
+                    "venue"
+                ]
 
-        home_col = find_column(
-            columns,
-            "Home Team",
-            "Home",
-        )
+            # If two sources disagree on time, prefer the
+            # newest source encountered only if it is plausible.
 
-        away_col = find_column(
-            columns,
-            "Away Team",
-            "Away",
-        )
+            if fixture["date_time"]:
+                existing["date_time"] = fixture[
+                    "date_time"
+                ]
 
-        venue_col = find_column(
-            columns,
-            "Venue",
-        )
-
-        type_col = find_column(
-            columns,
-            "Type",
-            "Competition",
-        )
-
-        if date_col and home_col and away_col:
-            # Make a clean standard table independent of FA column names.
-            cleaned = pd.DataFrame()
-
-            cleaned["date_time"] = table[date_col].map(clean)
-            cleaned["home"] = table[home_col].map(clean)
-            cleaned["away"] = table[away_col].map(clean)
-
-            if venue_col:
-                cleaned["venue"] = table[venue_col].map(clean)
-            else:
-                cleaned["venue"] = ""
-
-            if type_col:
-                cleaned["competition"] = table[type_col].map(clean)
-            else:
-                cleaned["competition"] = ""
-
-            # Only keep Carterton fixtures.
-            cleaned = cleaned[
-                (cleaned["home"].map(normalise) == normalise(TEAM_NAME))
-                |
-                (cleaned["away"].map(normalise) == normalise(TEAM_NAME))
-            ]
-
-            # A results table may also contain Carterton.
-            # Upcoming fixtures should contain genuine future dates.
-            valid_dates = 0
-
-            for raw_date in cleaned["date_time"]:
-                try:
-                    datetime.strptime(
-                        raw_date,
-                        "%d/%m/%y %H:%M",
-                    )
-                    valid_dates += 1
-                except ValueError:
-                    pass
-
-            if valid_dates:
-                now_uk = datetime.now(UK_TIME)
-
-                future_rows = []
-
-                for _, row in cleaned.iterrows():
-                    try:
-                        fixture_datetime = datetime.strptime(
-                            row["date_time"],
-                            "%d/%m/%y %H:%M",
-                        ).replace(tzinfo=UK_TIME)
-
-                        # Small grace period means today's recently-started
-                        # match is not instantly removed.
-                        if fixture_datetime >= now_uk - timedelta(hours=4):
-                            future_rows.append(row)
-
-                    except ValueError:
-                        continue
-
-                if future_rows:
-                    result = pd.DataFrame(future_rows)
-
-                    print(
-                        f"Found {len(result)} upcoming Carterton fixtures."
-                    )
-
-                    return result
-
-    raise RuntimeError(
-        "Could not identify a valid upcoming Carterton fixture table. "
-        "Calendar has NOT been changed."
+    fixtures = list(
+        unique.values()
     )
 
+    fixtures.sort(
+        key=lambda fixture: fixture[
+            "date_time"
+        ]
+    )
+
+    source_description = ", ".join(
+        source_names
+    )
+
+    print(
+        f"Final validated candidate count: "
+        f"{len(fixtures)}"
+    )
+
+    return fixtures, source_description
+
 
 # ============================================================
-# VALIDATE FIXTURES
+# VALIDATION
 # ============================================================
 
-def validate_fixtures(fixtures: pd.DataFrame) -> None:
-    if fixtures.empty:
+def validate_fixtures(fixtures: list[dict]) -> None:
+
+    if not fixtures:
+
         raise RuntimeError(
-            "FA Full-Time returned zero upcoming fixtures. "
-            "Existing calendar has been preserved."
+            "Zero fixtures detected. "
+            "Calendar has NOT been changed."
         )
 
     if len(fixtures) > 100:
+
         raise RuntimeError(
-            "An unrealistic number of fixtures was detected. "
-            "Existing calendar has been preserved."
+            "More than 100 fixtures were detected. "
+            "This looks wrong, so the existing "
+            "calendar has been preserved."
         )
 
-    for _, fixture in fixtures.iterrows():
-        home = clean(fixture["home"])
-        away = clean(fixture["away"])
+    seen = set()
 
-        if (
-            normalise(home) != normalise(TEAM_NAME)
-            and normalise(away) != normalise(TEAM_NAME)
+    for fixture in fixtures:
+
+        home = fixture["home"]
+        away = fixture["away"]
+        start = fixture["date_time"]
+
+        if not (
+            is_carterton(home)
+            or is_carterton(away)
         ):
+
             raise RuntimeError(
-                f"Unexpected non-Carterton fixture: {home} v {away}. "
-                "Existing calendar has been preserved."
+                f"Unexpected fixture found: "
+                f"{home} v {away}"
             )
 
-        try:
-            datetime.strptime(
-                clean(fixture["date_time"]),
-                "%d/%m/%y %H:%M",
-            )
-        except ValueError as exc:
-            raise RuntimeError(
-                f"Invalid fixture date: {fixture['date_time']}. "
-                "Existing calendar has been preserved."
-            ) from exc
+        if not isinstance(
+            start,
+            datetime,
+        ):
 
+            raise RuntimeError(
+                f"Fixture has invalid date: "
+                f"{home} v {away}"
+            )
+
+        key = (
+            normalise(fixture["competition"]),
+            normalise(home),
+            normalise(away),
+        )
+
+        if key in seen:
+
+            raise RuntimeError(
+                f"Duplicate fixture detected: "
+                f"{home} v {away}"
+            )
+
+        seen.add(key)
+
+
+# ============================================================
+# EXISTING CALENDAR SAFETY
+# ============================================================
 
 def existing_event_count() -> int:
-    """Count fixtures in the currently published calendar."""
+
     if not OUTPUT_FILE.exists():
         return 0
 
     try:
-        content = OUTPUT_FILE.read_text(
+
+        text = OUTPUT_FILE.read_text(
             encoding="utf-8",
             errors="ignore",
         )
 
-        return content.count("BEGIN:VEVENT")
+        return text.count(
+            "BEGIN:VEVENT"
+        )
 
     except Exception:
         return 0
 
 
-def suspicious_drop_check(new_count: int) -> None:
-    """
-    Fail-safe against a partial/broken FA response.
+def suspicious_drop_check(
+    new_count: int,
+) -> None:
 
-    A legitimate season naturally loses fixtures one at a time.
-    A sudden drop from, for example, 25 fixtures to 2 probably means
-    the website or parser failed.
-    """
     old_count = existing_event_count()
 
     if old_count < 8:
         return
 
-    minimum_safe = max(2, int(old_count * 0.35))
+    # During a season the number will naturally fall,
+    # but it should not suddenly collapse.
+
+    minimum_safe = max(
+        2,
+        int(old_count * 0.35),
+    )
 
     if new_count < minimum_safe:
+
         raise RuntimeError(
-            f"Safety stop: existing calendar has {old_count} fixtures "
-            f"but FA Full-Time only returned {new_count}. "
-            "This looks suspicious, so the existing calendar has "
-            "NOT been overwritten."
+            f"Safety stop: existing calendar has "
+            f"{old_count} fixtures but the FA source "
+            f"only returned {new_count}. "
+            "Calendar preserved."
         )
 
 
 # ============================================================
-# CREATE ICS
+# CREATE CALENDAR
 # ============================================================
 
-def make_calendar(fixtures: pd.DataFrame) -> str:
-    now_utc = datetime.now(timezone.utc)
+def make_calendar(
+    fixtures: list[dict],
+) -> str:
+
+    now_utc = datetime.now(
+        timezone.utc
+    )
 
     lines = [
         "BEGIN:VCALENDAR",
@@ -420,10 +740,12 @@ def make_calendar(fixtures: pd.DataFrame) -> str:
         "CALSCALE:GREGORIAN",
         "METHOD:PUBLISH",
         "X-WR-CALNAME:Carterton FC Men's Fixtures",
-        "X-WR-CALDESC:Automatic Carterton FC fixture calendar from FA Full-Time",
+        (
+            "X-WR-CALDESC:Automatic Carterton FC "
+            "fixture calendar from FA Full-Time"
+        ),
         "X-WR-TIMEZONE:Europe/London",
 
-        # British timezone definition.
         "BEGIN:VTIMEZONE",
         "TZID:Europe/London",
         "X-LIC-LOCATION:Europe/London",
@@ -447,64 +769,78 @@ def make_calendar(fixtures: pd.DataFrame) -> str:
         "END:VTIMEZONE",
     ]
 
-    sorted_fixtures = fixtures.copy()
+    for fixture in fixtures:
 
-    sorted_fixtures["_sort"] = sorted_fixtures[
-        "date_time"
-    ].map(
-        lambda value: datetime.strptime(
-            clean(value),
-            "%d/%m/%y %H:%M",
+        competition = clean(
+            fixture["competition"]
         )
-    )
 
-    sorted_fixtures = sorted_fixtures.sort_values("_sort")
+        home = clean(
+            fixture["home"]
+        )
 
-    for _, fixture in sorted_fixtures.iterrows():
-        competition = clean(fixture["competition"])
-        home = clean(fixture["home"])
-        away = clean(fixture["away"])
-        venue = clean(fixture["venue"])
+        away = clean(
+            fixture["away"]
+        )
 
-        start = datetime.strptime(
-            clean(fixture["date_time"]),
-            "%d/%m/%y %H:%M",
-        ).replace(tzinfo=UK_TIME)
+        venue = clean(
+            fixture["venue"]
+        )
 
-        # Two-hour calendar slot.
-        end = start + timedelta(hours=2)
+        start = fixture[
+            "date_time"
+        ]
 
-        if normalise(home) == normalise(TEAM_NAME):
-            home_away = "Home"
+        # Reserve a 2 hour match slot.
+        end = start + timedelta(
+            hours=2
+        )
+
+        if is_carterton(home):
+
             opponent = away
+            home_away = "Home"
+
+            summary = (
+                f"Carterton FC v {opponent}"
+            )
+
         else:
-            home_away = "Away"
+
             opponent = home
+            home_away = "Away"
 
-        summary = f"Carterton FC v {opponent}"
+            summary = (
+                f"{opponent} v Carterton FC"
+            )
 
-        if home_away == "Away":
-            summary = f"{opponent} v Carterton FC"
-
-        description_parts = [
+        description = [
             "Carterton FC Men's First Team",
             f"{home_away} fixture",
         ]
 
         if competition:
-            description_parts.append(
+            description.append(
                 f"Competition: {competition}"
             )
 
-        description_parts.extend(
+        description.extend(
             [
                 "",
-                "Fixture information automatically supplied from FA Full-Time.",
-                "Please check official club channels for any late changes.",
+                (
+                    "Fixture information automatically "
+                    "supplied from FA Full-Time."
+                ),
+                (
+                    "Please check official club channels "
+                    "for any very late changes."
+                ),
             ]
         )
 
-        description = "\\n".join(description_parts)
+        description_text = "\\n".join(
+            description
+        )
 
         uid = stable_uid(
             competition,
@@ -515,90 +851,150 @@ def make_calendar(fixtures: pd.DataFrame) -> str:
         event_lines = [
             "BEGIN:VEVENT",
             f"UID:{uid}",
-            f"DTSTAMP:{now_utc.strftime('%Y%m%dT%H%M%SZ')}",
-            f"LAST-MODIFIED:{now_utc.strftime('%Y%m%dT%H%M%SZ')}",
-            f"DTSTART;TZID=Europe/London:{start.strftime('%Y%m%dT%H%M%S')}",
-            f"DTEND;TZID=Europe/London:{end.strftime('%Y%m%dT%H%M%S')}",
-            f"SUMMARY:{ics_escape(summary)}",
-            f"LOCATION:{ics_escape(venue)}",
-            f"DESCRIPTION:{ics_escape(description)}",
+            (
+                "DTSTAMP:"
+                f"{now_utc.strftime('%Y%m%dT%H%M%SZ')}"
+            ),
+            (
+                "LAST-MODIFIED:"
+                f"{now_utc.strftime('%Y%m%dT%H%M%SZ')}"
+            ),
+            (
+                "DTSTART;TZID=Europe/London:"
+                f"{start.strftime('%Y%m%dT%H%M%S')}"
+            ),
+            (
+                "DTEND;TZID=Europe/London:"
+                f"{end.strftime('%Y%m%dT%H%M%S')}"
+            ),
+            (
+                "SUMMARY:"
+                f"{ics_escape(summary)}"
+            ),
+            (
+                "LOCATION:"
+                f"{ics_escape(venue)}"
+            ),
+            (
+                "DESCRIPTION:"
+                f"{ics_escape(description_text)}"
+            ),
             "STATUS:CONFIRMED",
             "TRANSP:OPAQUE",
             "END:VEVENT",
         ]
 
-        lines.extend(event_lines)
+        lines.extend(
+            event_lines
+        )
 
-    lines.append("END:VCALENDAR")
+    lines.append(
+        "END:VCALENDAR"
+    )
 
-    # Properly fold long ICS lines.
     folded = []
 
     for line in lines:
-        folded.extend(fold_ics_line(line))
+        folded.extend(
+            fold_ics_line(line)
+        )
 
-    return "\r\n".join(folded) + "\r\n"
+    return (
+        "\r\n".join(folded)
+        + "\r\n"
+    )
 
 
 # ============================================================
-# FINAL SAFETY CHECK
+# CALENDAR VALIDATION
 # ============================================================
 
-def validate_calendar(calendar_text: str, expected_events: int) -> None:
-    if not calendar_text.startswith("BEGIN:VCALENDAR"):
-        raise RuntimeError("Generated calendar is invalid.")
+def validate_calendar(
+    calendar_text: str,
+    expected_events: int,
+) -> None:
 
-    if not calendar_text.rstrip().endswith("END:VCALENDAR"):
-        raise RuntimeError("Generated calendar is incomplete.")
+    if not calendar_text.startswith(
+        "BEGIN:VCALENDAR"
+    ):
 
-    event_count = calendar_text.count("BEGIN:VEVENT")
+        raise RuntimeError(
+            "Generated calendar header is invalid."
+        )
+
+    if not calendar_text.rstrip().endswith(
+        "END:VCALENDAR"
+    ):
+
+        raise RuntimeError(
+            "Generated calendar is incomplete."
+        )
+
+    event_count = calendar_text.count(
+        "BEGIN:VEVENT"
+    )
 
     if event_count != expected_events:
+
         raise RuntimeError(
-            f"Calendar validation failed: expected "
-            f"{expected_events} events but generated {event_count}."
+            f"Expected {expected_events} events "
+            f"but generated {event_count}."
         )
 
     if "Carterton" not in calendar_text:
+
         raise RuntimeError(
-            "Calendar validation failed: Carterton was not found."
+            "Generated calendar does not contain Carterton."
+        )
+
+    if "DTSTART" not in calendar_text:
+
+        raise RuntimeError(
+            "Generated calendar contains no fixture times."
         )
 
 
 # ============================================================
-# SAFE WRITE
+# SAFE FILE REPLACEMENT
 # ============================================================
 
-def safely_publish(calendar_text: str) -> None:
-    """
-    Write to a temporary file first.
-
-    The real fixtures.ics is only replaced AFTER everything has
-    downloaded, parsed and validated successfully.
-    """
-    directory = OUTPUT_FILE.parent
+def safely_publish(
+    calendar_text: str,
+) -> None:
 
     with tempfile.NamedTemporaryFile(
         mode="w",
         encoding="utf-8",
         newline="",
         delete=False,
-        dir=directory,
+        dir=".",
         suffix=".tmp",
     ) as temporary:
-        temporary.write(calendar_text)
-        temporary_path = Path(temporary.name)
 
-    try:
-        # One final read-back test.
-        check = temporary_path.read_text(
-            encoding="utf-8",
-            errors="strict",
+        temporary.write(
+            calendar_text
         )
 
-        if "BEGIN:VCALENDAR" not in check:
+        temporary_path = Path(
+            temporary.name
+        )
+
+    try:
+
+        verification = (
+            temporary_path.read_text(
+                encoding="utf-8",
+                errors="strict",
+            )
+        )
+
+        if (
+            "BEGIN:VCALENDAR"
+            not in verification
+        ):
+
             raise RuntimeError(
-                "Temporary calendar file failed validation."
+                "Temporary calendar failed validation."
             )
 
         os.replace(
@@ -607,25 +1003,44 @@ def safely_publish(calendar_text: str) -> None:
         )
 
     finally:
+
         if temporary_path.exists():
+
             temporary_path.unlink()
 
 
-def write_status(fixture_count: int, success: bool, message: str) -> None:
+# ============================================================
+# STATUS FILE
+# ============================================================
+
+def write_status(
+    fixture_count: int,
+    success: bool,
+    message: str,
+    source: str,
+) -> None:
+
     status = {
         "team": "Carterton FC Men's",
-        "source": "FA Full-Time",
-        "source_url": FULL_TIME_URL,
-        "last_checked_utc": datetime.now(
-            timezone.utc
-        ).isoformat(),
+        "team_id": TEAM_ID,
+        "source": source,
+        "team_url": TEAM_URL,
+        "league_url": LEAGUE_URL,
+        "last_checked_utc": (
+            datetime.now(
+                timezone.utc
+            ).isoformat()
+        ),
         "success": success,
         "fixture_count": fixture_count,
         "message": message,
     }
 
     STATUS_FILE.write_text(
-        json.dumps(status, indent=2),
+        json.dumps(
+            status,
+            indent=2,
+        ),
         encoding="utf-8",
     )
 
@@ -635,55 +1050,99 @@ def write_status(fixture_count: int, success: bool, message: str) -> None:
 # ============================================================
 
 def main() -> int:
+
     print("=" * 60)
-    print("CARTERTON FC AUTOMATIC FIXTURE CALENDAR")
+    print(
+        "CARTERTON FC AUTOMATIC FIXTURE CALENDAR"
+    )
     print("=" * 60)
 
     try:
-        page = download_full_time_page()
 
-        fixtures = get_fixture_table(page)
+        sources = (
+            download_full_time_pages()
+        )
 
-        validate_fixtures(fixtures)
+        fixtures, source_description = (
+            extract_fixtures(
+                sources
+            )
+        )
 
-        suspicious_drop_check(len(fixtures))
+        validate_fixtures(
+            fixtures
+        )
 
-        calendar_text = make_calendar(fixtures)
+        suspicious_drop_check(
+            len(fixtures)
+        )
+
+        calendar_text = make_calendar(
+            fixtures
+        )
 
         validate_calendar(
             calendar_text,
             len(fixtures),
         )
 
-        safely_publish(calendar_text)
+        safely_publish(
+            calendar_text
+        )
 
         write_status(
             fixture_count=len(fixtures),
             success=True,
-            message="Calendar updated successfully.",
+            message=(
+                "Calendar updated successfully."
+            ),
+            source=source_description,
         )
 
         print()
+        print("=" * 60)
+
         print(
-            f"SUCCESS: {len(fixtures)} fixtures published."
+            f"SUCCESS: {len(fixtures)} "
+            "fixtures published."
         )
-        print("fixtures.ics updated safely.")
+
+        print(
+            "fixtures.ics updated safely."
+        )
+
+        print(
+            f"Source: {source_description}"
+        )
+
+        print("=" * 60)
 
         return 0
 
     except Exception as exc:
+
         print()
-        print("UPDATE FAILED SAFELY")
-        print(str(exc))
-        print()
+        print("=" * 60)
         print(
-            "The existing fixtures.ics file has NOT been overwritten."
+            "UPDATE FAILED SAFELY"
+        )
+        print("=" * 60)
+
+        print(
+            str(exc)
         )
 
-        # We deliberately do NOT overwrite the good calendar
-        # when anything goes wrong.
+        print()
+
+        print(
+            "The existing fixtures.ics file "
+            "has NOT been overwritten."
+        )
+
         return 1
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(
+        main()
+    )

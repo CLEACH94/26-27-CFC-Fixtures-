@@ -1,0 +1,296 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Carterton FC//Fixtures 2026-27//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:Carterton FC Men's Fixtures
+X-WR-TIMEZONE:Europe/London
+BEGIN:VEVENT
+UID:bb6807c7094f7f9f6d86fc73@carterton-fc-fixtures
+DTSTART;TZID=Europe/London:20260818T194500
+DTEND;TZID=Europe/London:20260818T214500
+SUMMARY:Cheltenham Saracens v Carterton
+LOCATION:PETERSFIELD PARK (CHELTENHAM SARACENS FC)
+DESCRIPTION:Carterton FC Men — HL1. Fixture details from FA Full-Time\; check club channels for late changes.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:15c3cfaab36608690a152897@carterton-fc-fixtures
+DTSTART;TZID=Europe/London:20260822T150000
+DTEND;TZID=Europe/London:20260822T170000
+SUMMARY:Carterton v Bromyard Town
+LOCATION:CARTERTON FOOTBALL CLUB
+DESCRIPTION:Carterton FC Men — HL1. Fixture details from FA Full-Time\; check club channels for late changes.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:6256951e42d34b8f67115134@carterton-fc-fixtures
+DTSTART;TZID=Europe/London:20260829T150000
+DTEND;TZID=Europe/London:20260829T170000
+SUMMARY:Carterton v Newent Town
+LOCATION:CARTERTON FOOTBALL CLUB
+DESCRIPTION:Carterton FC Men — HL1. Fixture details from FA Full-Time\; check club channels for late changes.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:78603cca59c5d4c33d0e2f2b@carterton-fc-fixtures
+DTSTART;TZID=Europe/London:20260901T194500
+DTEND;TZID=Europe/London:20260901T214500
+SUMMARY:Clanfield (85) v Carterton
+LOCATION:CLANFIELD 85 FC
+DESCRIPTION:Carterton FC Men — HL1. Fixture details from FA Full-Time\; check club channels for late changes.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:8b4a59d2e7cce91b72b444fc@carterton-fc-fixtures
+DTSTART;TZID=Europe/London:20260905T150000
+DTEND;TZID=Europe/London:20260905T170000
+SUMMARY:Alcester Town v Carterton
+LOCATION:ALCESTER TOWN FC (STRATFORD ROAD)
+DESCRIPTION:Carterton FC Men — HL1. Fixture details from FA Full-Time\; check club channels for late changes.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:e8181504106d849087b54cb7@carterton-fc-fixtures
+DTSTART;TZID=Europe/London:20260912T150000
+DTEND;TZID=Europe/London:20260912T170000
+SUMMARY:Sandhurst Town v Carterton
+LOCATION:SANDHURST MEMORIAL PARK
+DESCRIPTION:Carterton FC Men — FAV. Fixture details from FA Full-Time\; check club channels for late changes.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:7cde87276d12d059229ae3d7@carterton-fc-fixtures
+DTSTART;TZID=Europe/London:20260915T194500
+DTEND;TZID=Europe/London:20260915T214500
+SUMMARY:Carterton v Stonehouse Town
+LOCATION:CARTERTON FOOTBALL CLUB
+DESCRIPTION:Carterton FC Men — HL1. Fixture details from FA Full-Time\; check club channels for late changes.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:83e9efcf9a067629db74ab22@carterton-fc-fixtures
+DTSTART;TZID=Europe/London:20260919T150000
+DTEND;TZID=Europe/London:20260919T170000
+SUMMARY:Carterton v Ludlow Town
+LOCATION:CARTERTON FOOTBALL CLUB
+DESCRIPTION:Carterton FC Men — HL1. Fixture details from FA Full-Time\; check club channels for late changes.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:80ee70e7d39b492b406ec800@carterton-fc-fixtures
+DTSTART;TZID=Europe/London:20260923T194500
+DTEND;TZID=Europe/London:20260923T214500
+SUMMARY:Swindon Supermarine Reserves v Carterton
+LOCATION:SWINDON SUPERMARINE FOOTBALL CLUB
+DESCRIPTION:Carterton FC Men — HL1. Fixture details from FA Full-Time\; check club channels for late changes.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:0fe68c9b4f7180978f500223@carterton-fc-fixtures
+DTSTART;TZID=Europe/London:20260926T150000
+DTEND;TZID=Europe/London:20260926T170000
+SUMMARY:Lydney Town v Carterton
+LOCATION:SANSOM PARK
+DESCRIPTION:Carterton FC Men — HL1. Fixture details from FA Full-Time\; check club channels for late changes.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:ff739d18062f53fa9a2727b4@carterton-fc-fixtures
+DTSTART;TZID=Europe/London:20261010T150000
+DTEND;TZID=Europe/London:20261010T170000
+SUMMARY:Shortwood United v Carterton
+LOCATION:MEADOWBANK GROUND
+DESCRIPTION:Carterton FC Men — HL1. Fixture details from FA Full-Time\; check club channels for late changes.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:de195e7f02d49c9d9336e407@carterton-fc-fixtures
+DTSTART;TZID=Europe/London:20261017T150000
+DTEND;TZID=Europe/London:20261017T170000
+SUMMARY:Carterton v Brimscombe & Thrupp
+LOCATION:CARTERTON FOOTBALL CLUB
+DESCRIPTION:Carterton FC Men — HL1. Fixture details from FA Full-Time\; check club channels for late changes.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:40cd99ef0a45390d6fb646b6@carterton-fc-fixtures
+DTSTART;TZID=Europe/London:20261024T150000
+DTEND;TZID=Europe/London:20261024T170000
+SUMMARY:Carterton v Studley
+LOCATION:CARTERTON FOOTBALL CLUB
+DESCRIPTION:Carterton FC Men — HL1. Fixture details from FA Full-Time\; check club channels for late changes.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:c12e1744a6555057575d888b@carterton-fc-fixtures
+DTSTART;TZID=Europe/London:20261031T150000
+DTEND;TZID=Europe/London:20261031T170000
+SUMMARY:Redditch Borough v Carterton
+LOCATION:REDDITCH BOROUGH COMMUNITY SPORTS AND SOCIAL CLUB
+DESCRIPTION:Carterton FC Men — HL1. Fixture details from FA Full-Time\; check club channels for late changes.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:787f16678c61fc83c161e488@carterton-fc-fixtures
+DTSTART;TZID=Europe/London:20261114T150000
+DTEND;TZID=Europe/London:20261114T170000
+SUMMARY:Carterton v Chipping Sodbury Town
+LOCATION:CARTERTON FOOTBALL CLUB
+DESCRIPTION:Carterton FC Men — HL1. Fixture details from FA Full-Time\; check club channels for late changes.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:5671f8d4ed692ce55c3069f2@carterton-fc-fixtures
+DTSTART;TZID=Europe/London:20261121T150000
+DTEND;TZID=Europe/London:20261121T170000
+SUMMARY:Carterton v Bewdley Town
+LOCATION:CARTERTON FOOTBALL CLUB
+DESCRIPTION:Carterton FC Men — HL1. Fixture details from FA Full-Time\; check club channels for late changes.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:e7ccbfd5fb8b963ea7f3db26@carterton-fc-fixtures
+DTSTART;TZID=Europe/London:20261128T150000
+DTEND;TZID=Europe/London:20261128T170000
+SUMMARY:Carterton v Lydney Town
+LOCATION:CARTERTON FOOTBALL CLUB
+DESCRIPTION:Carterton FC Men — HL1. Fixture details from FA Full-Time\; check club channels for late changes.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:b06b1d078d79c102599d74d2@carterton-fc-fixtures
+DTSTART;TZID=Europe/London:20261212T150000
+DTEND;TZID=Europe/London:20261212T170000
+SUMMARY:Bromyard Town v Carterton
+LOCATION:DELAHAY MEADOW
+DESCRIPTION:Carterton FC Men — HL1. Fixture details from FA Full-Time\; check club channels for late changes.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:b9d9c5ebea58c289a58e7af4@carterton-fc-fixtures
+DTSTART;TZID=Europe/London:20261219T150000
+DTEND;TZID=Europe/London:20261219T170000
+SUMMARY:Brimscombe & Thrupp v Carterton
+LOCATION:THE MEADOW
+DESCRIPTION:Carterton FC Men — HL1. Fixture details from FA Full-Time\; check club channels for late changes.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:addd031d2717d4272ad3ae2b@carterton-fc-fixtures
+DTSTART;TZID=Europe/London:20261226T150000
+DTEND;TZID=Europe/London:20261226T170000
+SUMMARY:Wantage Town v Carterton
+LOCATION:ALFREDIAN PARK Main Pitch
+DESCRIPTION:Carterton FC Men — HL1. Fixture details from FA Full-Time\; check club channels for late changes.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:0021968fa7b33f7b2b3d6d0a@carterton-fc-fixtures
+DTSTART;TZID=Europe/London:20270102T150000
+DTEND;TZID=Europe/London:20270102T170000
+SUMMARY:Carterton v Redditch Borough
+LOCATION:CARTERTON FOOTBALL CLUB
+DESCRIPTION:Carterton FC Men — HL1. Fixture details from FA Full-Time\; check club channels for late changes.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:07d9c5e922c3b0602628fe13@carterton-fc-fixtures
+DTSTART;TZID=Europe/London:20270109T150000
+DTEND;TZID=Europe/London:20270109T170000
+SUMMARY:Ludlow Town v Carterton
+LOCATION:THE LUDLOW STADIUM
+DESCRIPTION:Carterton FC Men — HL1. Fixture details from FA Full-Time\; check club channels for late changes.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:f94bed7dbf00636e2e1988ea@carterton-fc-fixtures
+DTSTART;TZID=Europe/London:20270123T150000
+DTEND;TZID=Europe/London:20270123T170000
+SUMMARY:Carterton v Swindon Supermarine Reserves
+LOCATION:CARTERTON FOOTBALL CLUB
+DESCRIPTION:Carterton FC Men — HL1. Fixture details from FA Full-Time\; check club channels for late changes.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:9c551fb162f86da1cf681a90@carterton-fc-fixtures
+DTSTART;TZID=Europe/London:20270130T150000
+DTEND;TZID=Europe/London:20270130T170000
+SUMMARY:Carterton v Shortwood United
+LOCATION:CARTERTON FOOTBALL CLUB
+DESCRIPTION:Carterton FC Men — HL1. Fixture details from FA Full-Time\; check club channels for late changes.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:041497b5f959fc16db029bcd@carterton-fc-fixtures
+DTSTART;TZID=Europe/London:20270213T150000
+DTEND;TZID=Europe/London:20270213T170000
+SUMMARY:Studley v Carterton
+LOCATION:STUDLEY SPORTS CENTRE
+DESCRIPTION:Carterton FC Men — HL1. Fixture details from FA Full-Time\; check club channels for late changes.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:2e647487306739e8734fb9f5@carterton-fc-fixtures
+DTSTART;TZID=Europe/London:20270220T150000
+DTEND;TZID=Europe/London:20270220T170000
+SUMMARY:Sharpness v Carterton
+LOCATION:HAMFIELDS LEISURE CENTRE
+DESCRIPTION:Carterton FC Men — HL1. Fixture details from FA Full-Time\; check club channels for late changes.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:ea90be49f8d6ea40ac6ee175@carterton-fc-fixtures
+DTSTART;TZID=Europe/London:20270227T150000
+DTEND;TZID=Europe/London:20270227T170000
+SUMMARY:Stonehouse Town v Carterton
+LOCATION:OLDENDS LANE PLAYING FIELD
+DESCRIPTION:Carterton FC Men — HL1. Fixture details from FA Full-Time\; check club channels for late changes.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:eea4f4c8d5fe5bf420536697@carterton-fc-fixtures
+DTSTART;TZID=Europe/London:20270306T150000
+DTEND;TZID=Europe/London:20270306T170000
+SUMMARY:Carterton v Cheltenham Saracens
+LOCATION:CARTERTON FOOTBALL CLUB
+DESCRIPTION:Carterton FC Men — HL1. Fixture details from FA Full-Time\; check club channels for late changes.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:1dff6a76b5445be9b752df31@carterton-fc-fixtures
+DTSTART;TZID=Europe/London:20270327T150000
+DTEND;TZID=Europe/London:20270327T170000
+SUMMARY:Chipping Sodbury Town v Carterton
+LOCATION:THE RIDINGS
+DESCRIPTION:Carterton FC Men — HL1. Fixture details from FA Full-Time\; check club channels for late changes.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:0f3b0ffc49bddbe124a1eb1c@carterton-fc-fixtures
+DTSTART;TZID=Europe/London:20270329T150000
+DTEND;TZID=Europe/London:20270329T170000
+SUMMARY:Carterton v Clanfield (85)
+LOCATION:CARTERTON FOOTBALL CLUB
+DESCRIPTION:Carterton FC Men — HL1. Fixture details from FA Full-Time\; check club channels for late changes.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:78b4f4dcde23e95b019f5b00@carterton-fc-fixtures
+DTSTART;TZID=Europe/London:20270410T150000
+DTEND;TZID=Europe/London:20270410T170000
+SUMMARY:Newent Town v Carterton
+LOCATION:NEWENT TOWN AFC
+DESCRIPTION:Carterton FC Men — HL1. Fixture details from FA Full-Time\; check club channels for late changes.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:7cfd853afc690c6e64111b79@carterton-fc-fixtures
+DTSTART;TZID=Europe/London:20270417T150000
+DTEND;TZID=Europe/London:20270417T170000
+SUMMARY:Carterton v Alcester Town
+LOCATION:CARTERTON FOOTBALL CLUB
+DESCRIPTION:Carterton FC Men — HL1. Fixture details from FA Full-Time\; check club channels for late changes.
+STATUS:CONFIRMED
+END:VEVENT
+END:VCALENDAR
